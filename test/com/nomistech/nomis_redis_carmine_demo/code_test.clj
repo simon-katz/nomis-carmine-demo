@@ -1,6 +1,6 @@
-(ns com.nomistech.clojure-redis-carmine-demo.code-test
+(ns com.nomistech.nomis-redis-carmine-demo.code-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [com.nomistech.clojure-redis-carmine-demo.code :as sut]
+            [com.nomistech.nomis-redis-carmine-demo.code :as sut]
             [taoensso.carmine :as car]))
 
 (def my-conn-spec
