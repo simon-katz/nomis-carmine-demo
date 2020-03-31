@@ -6,8 +6,10 @@
 
 ;;;; ___________________________________________________________________________
 
-;;;; `clojure.tools.namespace.repl` sometimes doesn't work out what dirs to
-;;;; read from when refreshing.
+;;;; `clojure.tools.namespace.repl` sometimes doesn't work, because it doesn't
+;;;; know what directories to read from when refreshing. This is a problem
+;;;; caused by different behaviour around classpaths on different versions of
+;;;; the JVM.
 ;;;;
 ;;;; See:
 ;;;; - https://ask.clojure.org/index.php/8288/java-11-and-tools-namespace
