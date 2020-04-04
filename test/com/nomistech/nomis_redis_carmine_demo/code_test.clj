@@ -184,6 +184,9 @@
 ;;;; ___________________________________________________________________________
 ;;;; Data serialisation
 
+;;;; TODO Q. So, if you PUT a Clojure sequence, that's not the same as making
+;;;;         a Redis list, right? (Yeah. Should demo with a test.)
+
 (deftest data-serialisation-test
   (let [data {:bigint (bigint 31415926535897932384626433832795)
               :vec    (vec (range 5))
@@ -197,6 +200,63 @@
            (car/wcar my-conn-spec
                      (car/set "clj-key" data)
                      (car/get "clj-key"))))))
+
+(deftest set-and-get-number-value-changes-to-a-string
+  (testing "We don't get what we set in the case of a number"
+    (try (is (= "OK"
+                (car/wcar my-conn-spec
+                          (car/set "nomis/foo" 42))))
+         (is (= "42"
+                (car/wcar my-conn-spec
+                          (car/get "nomis/foo"))))
+         (finally
+           (car/wcar my-conn-spec
+                     (car/del "nomis/foo"))))))
+
+
+;;;; TODO What about Clojure data as list elements?
+
+(deftest list-play-1
+  (is (= ["9" "8" "7" "6" "5" "4" "3" "2" "1" "0"]
+         (let [n 10]
+           (car/wcar my-conn-spec
+                     (dotimes [i n]
+                       (car/lpush "nomis/my-list" i)))
+           (car/wcar my-conn-spec
+                     (dotimes [i n]
+                       (car/lpop "nomis/my-list")))))))
+
+(deftest list-play-2 ; TODO We don't set and get the same Clojure data
+  ;; We can add multiple items at once.
+  (is (= [{:user-id 15} {:user-id 12} {:user-id 9} {:user-id 6} {:user-id 3}
+          {:user-id 10} {:user-id  8} {:user-id 6} {:user-id 4} {:user-id 2}
+          {:user-id 5}  {:user-id  4} {:user-id 3} {:user-id 2} {:user-id 1}]
+         (let [n 3
+               m 5]
+           (car/wcar my-conn-spec
+                     (dotimes [i n]
+                       (apply car/lpush
+                              "nomis/my-list"
+                              (for [j (range m)]
+                                {:user-id (* (inc i) (inc j))}))))
+           (car/wcar my-conn-spec
+                     (dotimes [_ (* m n)]
+                       (car/lpop "nomis/my-list")))))))
+
+(deftest list-play-3 ; TODO This is serialising -- we can set and get the same Clojure data
+  (let [data {:bigint (bigint 31415926535897932384626433832795)
+              :set    #{true false :a :b :c :d}}
+        n 2]
+    (is (= (reverse
+            (for [i (range n)]
+              [i data]))
+           (do (car/wcar my-conn-spec
+                         (dotimes [i n]
+                           (car/lpush "nomis/my-list" [i data])))
+               (car/wcar my-conn-spec
+                         (dotimes [i n]
+                           (car/lpop "nomis/my-list"))))))))
+
 ;;;; ___________________________________________________________________________
 ;;;; Server-side Lua scripting -- TODO
 
