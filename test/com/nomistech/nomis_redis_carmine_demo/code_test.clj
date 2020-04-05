@@ -22,11 +22,9 @@
 ;;;; ___________________________________________________________________________
 ;;;; `with-del-on-start-and-finish`
 
-(defn with-del-on-start-and-finish* [{ks :keys :as opts} fun]
-  (when-not (contains? opts :keys)
-    (throw (Exception. ":keys key missing from opts")))
-  (when (not (coll? ks))
-    (throw (Exception. (str "Value for :keys key is not a collection: got "
+(defn with-del-on-start-and-finish* [ks fun]
+  (when-not (sequential? ks)
+    (throw (Exception. (str "Value for ks is not a collection: got "
                             (pr-str ks)))))
   (let [delete-keys #(when (not (empty? ks))
                        (wcar* (apply car/del ks)))]
@@ -35,8 +33,8 @@
       (delete-keys)
       result)))
 
-(defmacro with-del-on-start-and-finish [opts & body]
-  `(with-del-on-start-and-finish* ~opts (fn [] ~@body)))
+(defmacro with-del-on-start-and-finish [ks & body]
+  `(with-del-on-start-and-finish* ~ks (fn [] ~@body)))
 
 (deftest with-del-on-start-and-finish-test
   (let [set-keys #(wcar* (car/set "nomis/demo/key/a" 1)
@@ -45,8 +43,8 @@
     (wcar*
      (set-keys)
      (testing "Before start, keys exist" (is (= 2 (count-keys))))
-     (with-del-on-start-and-finish {:keys ["nomis/demo/key/a"
-                                           "nomis/demo/key/b"]}
+     (with-del-on-start-and-finish ["nomis/demo/key/a"
+                                    "nomis/demo/key/b"]
        (testing "Just after start, keys don't exist" (is (= 0 (count-keys))))
        (set-keys)
        (testing "After setting them, keys exist" (is (= 2 (count-keys))))))
@@ -61,7 +59,7 @@
 
 (deftest set-and-get-test
   (wcar*
-   (with-del-on-start-and-finish {:keys ["nomis/demo/key"]}
+   (with-del-on-start-and-finish ["nomis/demo/key"]
      (is (= "OK"
             (wcar* (car/set "nomis/demo/key" "bar"))))
      (is (= "bar"
@@ -72,7 +70,7 @@
 
 (deftest for-multiple-redis-calls-we-get-a-vector-of-results
   (wcar*
-   (with-del-on-start-and-finish {:keys ["nomis/demo/key"]}
+   (with-del-on-start-and-finish ["nomis/demo/key"]
      (testing "If we execute multiple Redis commands, we get a vector of results"
        (is (= ["PONG" "OK" "bar"]
               (wcar* (car/ping)
@@ -114,7 +112,7 @@
 
 (deftest be-careful--we-can-have-vectors-as-values
   (wcar*
-   (with-del-on-start-and-finish {:keys ["nomis/demo/key"]}
+   (with-del-on-start-and-finish ["nomis/demo/key"]
      (testing "We can have a vector value -- so testing for vectors is not a general solution to seeing whether pipelining happened"
        (let [v [1 2 3]]
          (wcar* (car/set "nomis/demo/key" v))
@@ -127,7 +125,7 @@
 
   (testing "Exception when not pipelining"
     (wcar*
-     (with-del-on-start-and-finish {:keys ["nomis/demo/key/not-a-set"]}
+     (with-del-on-start-and-finish ["nomis/demo/key/not-a-set"]
        (car/set "nomis/demo/key/not-a-set" "not-a-set")
        (is (thrown-with-msg?
             Exception
@@ -136,7 +134,7 @@
 
   (testing "No exception when pipelining"
     (wcar*
-     (with-del-on-start-and-finish {:keys ["nomis/demo/key/not-a-set"]}
+     (with-del-on-start-and-finish ["nomis/demo/key/not-a-set"]
        (car/set "nomis/demo/key/not-a-set" "not-a-set")
        (let [[r1 r2 & rs] (wcar*
                            (car/exists "nomis/demo/key/not-a-set")
@@ -150,7 +148,7 @@
 
   (testing "No exception when pipelining, even when only one call to Redis"
     (wcar*
-     (with-del-on-start-and-finish {:keys ["nomis/demo/key/not-a-set"]}
+     (with-del-on-start-and-finish ["nomis/demo/key/not-a-set"]
        (car/set "nomis/demo/key/not-a-set" "not-a-set")
        (let [[r1 & rs] (wcar* :as-pipeline
                               (car/spop "nomis/demo/key/not-a-set"))]
@@ -164,7 +162,7 @@
   ;; This strangeness is needed to support the behaviour of throwing exceptions
   ;; when there's a single command but not when there are multiple commands.
   (wcar*
-   (with-del-on-start-and-finish {:keys ["nomis/demo/key/not-a-set"]}
+   (with-del-on-start-and-finish ["nomis/demo/key/not-a-set"]
      (car/set "nomis/demo/key/not-a-set" "not-a-set")
      (let [state        (atom :original-value)
            change-state #(reset! state :changed-value)]
@@ -191,7 +189,7 @@
   (wcar*
    (let [ks ["nomis/demo/key/k1"
              "nomis/demo/key/k2"]]
-     (with-del-on-start-and-finish {:keys ks}
+     (with-del-on-start-and-finish ks
        (testing "Non-lazy -- probably what you want"
          (is (= ["OK" "OK"]
                 (car/wcar {} (doseq [k ks] (car/set k :val))))))
@@ -212,7 +210,7 @@
                       (is (= [test-id expected-value]
                              [test-id (wcar* (car/get k))])))]
      (testing "For strings, keywords and simple numbers, values come back as strings"
-       (with-del-on-start-and-finish {:keys ["nomis/demo"]}
+       (with-del-on-start-and-finish ["nomis/demo"]
          (doseq [v ["42" :42 42]]
            (let [expected-got-value "42"
                  test-id ['check-values (type v)]]
@@ -221,7 +219,7 @@
      (testing "For keys, keywords and strings are conflated"
        (let [ks ["nomis/demo"
                  :nomis/demo]]
-         (with-del-on-start-and-finish {:keys ["nomis/demo"]}
+         (with-del-on-start-and-finish ["nomis/demo"]
            (doseq [write-k ks]
              (wcar* (car/set write-k "my-value"))
              (doseq [read-k ks]
@@ -241,7 +239,7 @@
        (let [k             "nomis/demo/key"
              [v1 v2 v3]    string-keyword-number
              [sv1 sv2 sv3] string-keyword-number-each-serialized]
-         (with-del-on-start-and-finish {:keys ["nomis/demo/key"]}
+         (with-del-on-start-and-finish ["nomis/demo/key"]
            (do
              (wcar* (car/set "nomis/demo/key" sv1))
              (is (= v1 (wcar* (car/get "nomis/demo/key")))))
@@ -254,7 +252,7 @@
      (testing "For keys"
        (let [[k1 k2 k3] string-keyword-number-each-serialized
              [v1 v2 v3] ["my-value-1" "my-value-2" "my-value-3"]]
-         (with-del-on-start-and-finish {:keys [k1 k2 k3]}
+         (with-del-on-start-and-finish [k1 k2 k3]
            (wcar* (car/set k1 v1))
            (wcar* (car/set k2 v2))
            (wcar* (car/set k3 v3))
@@ -274,7 +272,7 @@
 
 (deftest we-can-use-clojure-data-structures-as-values
   (wcar*
-   (with-del-on-start-and-finish {:keys ["nomis/demo/key"]}
+   (with-del-on-start-and-finish ["nomis/demo/key"]
      (let [v example-clj-data-from-carmine-readme]
        (car/set "nomis/demo/key" v)
        (is (= v (wcar* (car/get "nomis/demo/key"))))))))
@@ -283,14 +281,14 @@
   (wcar*
    (let [k example-clj-data-from-carmine-readme
          v "my-data"]
-     (with-del-on-start-and-finish {:keys [k]}
+     (with-del-on-start-and-finish [k]
        (wcar* (car/set k v))
        (is (= v (wcar* (car/get k))))))))
 
 (deftest we-can-use-large-unordered-data-structures-as-keys
   (let [k {:nomis/demo (set (range 5000))}
         v "my-value"]
-    (wcar* (with-del-on-start-and-finish {:keys [k]}
+    (wcar* (with-del-on-start-and-finish [k]
              (wcar* (car/set k v))
              (is (= v
                     (wcar* (car/get k))))))))
@@ -300,7 +298,7 @@
 
 (deftest list-lpush-rpop-test
   (let [vs ["v1" "v2" "v3"]]
-    (with-del-on-start-and-finish {:keys ["nomis/demo/key/my-list"]}
+    (with-del-on-start-and-finish ["nomis/demo/key/my-list"]
       (wcar* (doseq [v vs]
                (car/lpush "nomis/demo/key/my-list" v)))
       (is (= vs
@@ -308,7 +306,7 @@
                       (car/rpop "nomis/demo/key/my-list"))))))))
 
 (deftest we-can-add-multiple-items-to-a-list-in-one-go
-  (with-del-on-start-and-finish {:keys ["nomis/demo/key/my-list"]}
+  (with-del-on-start-and-finish ["nomis/demo/key/my-list"]
     (is (= [[0 0] [0 1] [0 2] [0 3] [0 4]
             [1 0] [1 1] [1 2] [1 3] [1 4]
             [2 0] [2 1] [2 2] [2 3] [2 4]]
@@ -325,7 +323,7 @@
 
 (deftest clojure-data-and-redis-lists-are-in-different-worlds--obvs
   (wcar*
-   (with-del-on-start-and-finish {:keys ["nomis/demo/key"]}
+   (with-del-on-start-and-finish ["nomis/demo/key"]
      (wcar* (car/set "nomis/demo/key" [1 2 3 4]))
      (is (thrown-with-msg? Exception
                            #"WRONGTYPE Operation against a key holding the wrong kind of value"
