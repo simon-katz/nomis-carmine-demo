@@ -227,37 +227,37 @@
 ;;;; Everything else is auto-serialized and auto-deserialized.
 
 (deftest strings-keywords-and-simple-numbers-are-conflated
-  (let [test-entry (fn [test-id expected-value k]
-                     (is (= [test-id expected-value]
-                            [test-id (wcar* (car/get k))])))]
-    (wcar*
-     (testing "For strings, keywords and simple numbers, values come back as strings"
-       (let [string-keyword-number ["42" :42 42]
-             [k1 k2 k3 :as ks] ["nomis/demo-key-1"
-                                "nomis/demo-key-2"
-                                "nomis/demo-key-3"]
-             [v1 v2 v3] string-keyword-number
-             v-as-string (first string-keyword-number)]
-         (with-del-on-start-and-finish {:keys ks}
-           (wcar* (car/set k1 v1)
-                  (car/set k2 v2)
-                  (car/set k3 v3))
-           (is (= v-as-string (wcar* (car/get k1))))
-           (is (= v-as-string (wcar* (car/get k2))))
-           (is (= v-as-string (wcar* (car/get k3)))))))
-     (testing "For keys, keywords and strings are conflated"
-       (let [ks ["nomis/demo"
-                 :nomis/demo]]
-         (with-del-on-start-and-finish {:keys ks}
-           (doseq [write-k ks]
-             (wcar* (car/set write-k "my-value"))
-             (doseq [read-k ks]
-               (let [test-id ['check-keys (type write-k) (type read-k)]]
-                 (test-entry test-id "my-value" read-k)))))
-         (testing "None of the keys exist"
-           (doseq [k ks]
-             (is (= [k 0]
-                    [k (wcar* (car/exists k))])))))))))
+  (wcar*
+
+   (testing "For strings, keywords and simple numbers, values come back as strings"
+     (let [string-keyword-number ["42" :42 42]
+           [k1 k2 k3 :as ks] ["nomis/demo-key-1"
+                              "nomis/demo-key-2"
+                              "nomis/demo-key-3"]
+           [v1 v2 v3] string-keyword-number
+           v-as-string (first string-keyword-number)]
+       (with-del-on-start-and-finish {:keys ks}
+         (wcar* (car/set k1 v1)
+                (car/set k2 v2)
+                (car/set k3 v3))
+         (is (= v-as-string (wcar* (car/get k1))))
+         (is (= v-as-string (wcar* (car/get k2))))
+         (is (= v-as-string (wcar* (car/get k3)))))))
+
+   (testing "For keys, keywords and strings are conflated"
+     (let [[v1 v2]        ["my-val-1"
+                           "my-val-2"]
+           [k1 k2 :as ks] ["nomis/demo"
+                           :nomis/demo]]
+       (with-del-on-start-and-finish {:keys ks}
+         (testing "Set k1/v1"
+           (wcar* (car/set k1 v1))
+           (testing "k1/v1 got set" (is (= v1 (wcar* (car/get k1)))))
+           (testing "k2/v1 got set" (is (= v1 (wcar* (car/get k2))))))
+         (testing "Set k2/v2"
+           (wcar* (car/set k2 v2))
+           (testing "k1/v1 got set" (is (= v2 (wcar* (car/get k1)))))
+           (testing "k2/v2 got set" (is (= v2 (wcar* (car/get k2)))))))))))
 
 (deftest serialize-stops-conflation
   (wcar*
