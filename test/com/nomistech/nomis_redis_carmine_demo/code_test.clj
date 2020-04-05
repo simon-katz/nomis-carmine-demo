@@ -236,19 +236,18 @@
          string-keyword-number-each-serialized (map car/serialize
                                                     string-keyword-number)]
      (testing "For values"
-       (let [k             "nomis/demo/key"
-             [v1 v2 v3]    string-keyword-number
+       (let [[k1 k2 k3 :as ks] ["nomis/demo/key1"
+                                "nomis/demo/key2"
+                                "nomis/demo/key3"]
              [sv1 sv2 sv3] string-keyword-number-each-serialized]
-         (with-del-on-start-and-finish ["nomis/demo/key"]
-           (do
-             (wcar* (car/set "nomis/demo/key" sv1))
-             (is (= v1 (wcar* (car/get "nomis/demo/key")))))
-           (do
-             (wcar* (car/set "nomis/demo/key" sv2))
-             (is (= v2 (wcar* (car/get "nomis/demo/key")))))
-           (do
-             (wcar* (car/set "nomis/demo/key" sv3))
-             (is (= v3 (wcar* (car/get "nomis/demo/key"))))))))
+         (with-del-on-start-and-finish ks
+           (wcar* (car/set k1 sv1)
+                  (car/set k2 sv2)
+                  (car/set k3 sv3))
+           (is (= string-keyword-number
+                  (wcar* (car/get k1)
+                         (car/get k2)
+                         (car/get k3)))))))
      (testing "For keys"
        (let [[k1 k2 k3] string-keyword-number-each-serialized
              [v1 v2 v3] ["my-value-1" "my-value-2" "my-value-3"]]
