@@ -1,8 +1,15 @@
 (ns dev
-  (:require [clojure.java.javadoc :refer [javadoc]]
-            [clojure.pprint :refer [pp pprint]]
-            [clojure.repl :refer [apropos dir doc find-doc pst source]]
-            [clojure.tools.namespace.repl :as tnr]))
+  (:require [clojure.tools.namespace.repl :as tnr]))
+
+;;;; ___________________________________________________________________________
+;;;; The following set up things that are in the `user` namespace by default,
+;;;; but which would otherwise get lost when calling `tnr/refresh` and `reset`.
+;;;; We put this here rather than in the namespace declaration so that things
+;;;; remain clear if we sort the namespace declaration.
+
+(require '[clojure.java.javadoc :refer [javadoc]])
+(require '[clojure.pprint :refer [pp pprint]])
+(require '[clojure.repl :refer [apropos dir doc find-doc pst source]])
 
 ;;;; ___________________________________________________________________________
 
