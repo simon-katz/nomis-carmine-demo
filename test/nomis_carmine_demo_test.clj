@@ -1,6 +1,6 @@
-(ns com.nomistech.nomis-redis-carmine-demo.code-test
+(ns nomis-carmine-demo-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [com.nomistech.nomis-redis-carmine-demo.code :as sut]
+            [nomis-carmine-demo :as sut]
             [taoensso.carmine :as car]
             [clojure.string :as str]))
 
