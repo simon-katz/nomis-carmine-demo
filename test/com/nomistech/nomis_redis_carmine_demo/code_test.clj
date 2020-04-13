@@ -372,7 +372,7 @@
 ;;;; ___________________________________________________________________________
 ;;;; Commands are (just) functions
 
-(deftest cammands-are-functions
+(deftest commands-are-functions
 
   (testing "`car/ping` is a function"
     (is (= ["PONG" "PONG" "PONG" "PONG" "PONG"]
