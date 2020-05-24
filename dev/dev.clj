@@ -1,6 +1,7 @@
 (ns dev
   (:require [clojure.main]
-            [clojure.tools.namespace.repl :as tnr]))
+            [clojure.tools.namespace.repl :as tnr
+             :refer [refresh refresh-all]]))
 
 ;;;; ___________________________________________________________________________
 ;;;; Require the standard REPL utils.
