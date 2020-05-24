@@ -7,7 +7,4 @@
                  [org.clojure/clojure "1.10.0"]]
   :repl-options {:init-ns dev}
   :profiles {:dev {:source-paths ["dev"]
-                   :dependencies [[org.clojure/tools.namespace "1.0.0"]
-                                  [pjstadig/humane-test-output "0.10.0"]]
-                   :injections [(require 'pjstadig.humane-test-output)
-                                (pjstadig.humane-test-output/activate!)]}})
+                   :dependencies [[org.clojure/tools.namespace "1.0.0"]]}})
